@@ -1,0 +1,48 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    
+    "chats": {
+      "$chatId": {
+        ".read": "root.child('chatMembers/' + $chatId + '/' + auth.uid).exists()",
+        ".write": "root.child('chatMembers/' + $chatId + '/' + auth.uid).exists()"
+      }
+    },
+    
+    "messages": {
+      "$chatId": {
+        ".indexOn": ["createdAt"],
+        "$msgId": {
+          ".read": "root.child('chatMembers/' + $chatId + '/' + auth.uid).exists()",
+          ".write": "root.child('chatMembers/' + $chatId + '/' + auth.uid).exists()"
+        }
+      }
+    },
+    
+    "chatMembers": {
+      "$chatId": {
+        "$uid": {
+          ".read": "$uid === auth.uid",
+          ".write": "auth != null && (newData.exists() && newData.val() === true)"
+        }
+      }
+    },
+    
+    "typing": {
+      "$chatId": {
+        "$uid": {
+          ".read": "root.child('chatMembers/' + $chatId + '/' + auth.uid).exists()",
+          ".write": "$uid === auth.uid"
+        }
+      }
+    },
+    
+    "presence": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    }
+  }
+}
