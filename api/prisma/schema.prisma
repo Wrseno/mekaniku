@@ -1,0 +1,344 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  WORKSHOP
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  NO_SHOW
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum WorkStatus {
+  QUEUED
+  INSPECTING
+  SERVICING
+  WAITING_PARTS
+  DONE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum NotificationType {
+  BOOKING_CREATED
+  BOOKING_UPDATED
+  PAYMENT_CONFIRMED
+  STATUS_CHANGED
+  CHAT_MESSAGE
+}
+
+enum ConsultationStatus {
+  OPEN
+  CLOSED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(CUSTOMER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  // Relations
+  ownedWorkshops  Workshop[]      @relation("WorkshopOwner")
+  mechanic        Mechanic?
+  vehicles        Vehicle[]
+  bookings        Booking[]
+  consultations   Consultation[]
+  reviews         Review[]
+  notifications   Notification[]
+  auditLogs       AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Workshop {
+  id        String   @id @default(cuid())
+  ownerId   String   @map("owner_id")
+  name      String
+  address   String
+  city      String
+  latitude  Float?
+  longitude Float?
+  openHours Json?    @map("open_hours") @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  owner            User              @relation("WorkshopOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  mechanics        Mechanic[]
+  serviceCatalogs  ServiceCatalog[]
+  bookings         Booking[]
+  consultations    Consultation[]
+
+  @@index([ownerId])
+  @@index([city])
+  @@index([latitude, longitude])
+  @@map("workshops")
+}
+
+model Mechanic {
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id")
+  workshopId     String   @map("workshop_id")
+  specialization String[]
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workshop Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  @@index([workshopId])
+  @@index([isActive])
+  @@map("mechanics")
+}
+
+model ServiceCatalog {
+  id              String   @id @default(cuid())
+  workshopId      String   @map("workshop_id")
+  name            String
+  description     String?
+  basePrice       Float    @map("base_price")
+  estDurationMin  Int      @map("est_duration_min")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  // Relations
+  workshop Workshop  @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([workshopId])
+  @@map("service_catalogs")
+}
+
+model Vehicle {
+  id         String   @id @default(cuid())
+  customerId String   @map("customer_id")
+  plateNo    String   @unique @map("plate_no")
+  brand      String
+  model      String
+  year       Int
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  customer User      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([customerId])
+  @@index([plateNo])
+  @@map("vehicles")
+}
+
+model Consultation {
+  id         String             @id @default(cuid())
+  customerId String             @map("customer_id")
+  workshopId String             @map("workshop_id")
+  message    String
+  status     ConsultationStatus @default(OPEN)
+  chatId     String?            @unique @map("chat_id")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  customer User     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workshop Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  @@index([customerId])
+  @@index([workshopId])
+  @@index([status])
+  @@index([chatId])
+  @@map("consultations")
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  customerId     String        @map("customer_id")
+  workshopId     String        @map("workshop_id")
+  vehicleId      String        @map("vehicle_id")
+  serviceId      String        @map("service_id")
+  consultationId String?       @map("consultation_id")
+  scheduledAt    DateTime      @map("scheduled_at")
+  status         BookingStatus @default(PENDING)
+  notes          String?
+  chatId         String?       @unique @map("chat_id")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+
+  // Relations
+  customer      User            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  workshop      Workshop        @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  vehicle       Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  service       ServiceCatalog  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  consultation  Consultation?   @relation(fields: [consultationId], references: [id], onDelete: SetNull)
+  inspection    Inspection?
+  workOrder     WorkOrder?
+  payment       Payment?
+  review        Review?
+  report        Report?
+
+  @@index([customerId])
+  @@index([workshopId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([chatId])
+  @@map("bookings")
+}
+
+model Inspection {
+  id        String   @id @default(cuid())
+  bookingId String   @unique @map("booking_id")
+  findings  Json     @db.JsonB
+  photos    String[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("inspections")
+}
+
+model WorkOrder {
+  id         String     @id @default(cuid())
+  bookingId  String     @unique @map("booking_id")
+  status     WorkStatus @default(QUEUED)
+  tasks      Json       @db.JsonB
+  parts      Json       @db.JsonB
+  laborHours Float      @default(0) @map("labor_hours")
+  subtotal   Float      @default(0)
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("work_orders")
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  bookingId   String        @unique @map("booking_id")
+  amount      Float
+  method      String
+  status      PaymentStatus @default(PENDING)
+  paidAt      DateTime?     @map("paid_at")
+  externalRef String?       @map("external_ref")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique @map("booking_id")
+  customerId String   @map("customer_id")
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  booking  Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer User    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([customerId])
+  @@index([rating])
+  @@map("reviews")
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique @map("booking_id")
+  pdfUrl     String?  @map("pdf_url")
+  summary    String
+  totalCost  Float    @map("total_cost")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("reports")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  toUserId  String           @map("to_user_id")
+  type      NotificationType
+  payload   Json             @db.JsonB
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId])
+  @@index([readAt])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String   @map("actor_id")
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  action     String
+  fromStatus String?  @map("from_status")
+  toStatus   String?  @map("to_status")
+  meta       Json?    @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
