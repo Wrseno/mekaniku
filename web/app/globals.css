@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F5F6FA;
+  --foreground: #2F3640;
+}
+
+@theme inline {
+  /* MekaniKu Color Palette */
+  --color-primary: #0A3D62;
+  --color-primary-50: #E6EEF3;
+  --color-primary-100: #CCE0E8;
+  --color-primary-500: #0A3D62;
+  --color-primary-600: #083152;
+  --color-primary-700: #062541;
+  
+  --color-secondary: #576574;
+  --color-secondary-50: #F2F3F4;
+  --color-secondary-500: #576574;
+  --color-secondary-600: #46515D;
+  
+  --color-accent: #EE5A24;
+  --color-accent-50: #FEF3EE;
+  --color-accent-500: #EE5A24;
+  --color-accent-600: #D64510;
+  
+  --color-background: #F5F6FA;
+  --color-background-dark: #E8EAED;
+  --color-foreground: #2F3640;
+  --color-charcoal: #2F3640;
+  
+  /* Border Radius */
+  --radius-mekaniku: 8px;
+  --radius-mekaniku-lg: 12px;
+  
+  /* Shadows */
+  --shadow-mekaniku: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-mekaniku-lg: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #006688 0%, #0A3D62 100%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #E8EAED;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #576574;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #46515D;
+}
+
